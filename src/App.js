@@ -1,18 +1,50 @@
-import React, { useEffect } from "react";
+import React, { useState, useEffect, createContext, useContext } from "react";
+import PropTypes from "prop-types";
 import { useDispatch, useSelector } from "react-redux";
-import { get } from "./redux/reducer";
+
+import { getEmployees, updateEmployee } from "./redux/reducer";
 
 import "./App.css";
 
+const EmployeesContext = createContext();
+
 function App() {
+  const { employees, loading, errorMessage } = useSelector((state) => state);
+  const [activeEmployees, setActiveEmployees] = useState(
+    JSON.parse(window.localStorage.getItem("activeEmployees")) || {}
+  );
+
+  const activeEmployeesArrLength = Object.keys(activeEmployees).length;
+
+  const dispatch = useDispatch();
+
+  useEffect(() => {
+    dispatch(getEmployees(Object.keys(activeEmployees)));
+  }, []);
+
+  useEffect(() => {
+    window.localStorage.setItem(
+      "activeEmployees",
+      JSON.stringify(activeEmployees)
+    );
+  }, [activeEmployeesArrLength]);
+
   return (
     <div className="layout clearfix">
-      <div className="layout-left">
-        <Employees />
-      </div>
-      <div className="layout-right">
-        <Birthdays />
-      </div>
+      {errorMessage ? (
+        <div className="error-message">{errorMessage}</div>
+      ) : loading ? (
+        "Loading..."
+      ) : (
+        <EmployeesContext.Provider value={setActiveEmployees}>
+          <div className="layout-left">
+            <Employees employees={employees} />
+          </div>
+          <div className="layout-right">
+            <Birthdays activeEmployees={activeEmployees} />
+          </div>
+        </EmployeesContext.Provider>
+      )}
     </div>
   );
 }
@@ -20,88 +52,169 @@ function App() {
 export default App;
 
 // Components
-function Employees() {
-  const { employees, loading, error } = useSelector((state) => state);
 
-  const dispatch = useDispatch();
+Employees.propTypes = {
+  employees: PropTypes.array,
+};
 
-  useEffect(() => {
-    dispatch(get());
-  }, []);
+function Employees({ employees }) {
+  const employeesAlphabetical = getUsersAlphabetical(employees);
 
-  const employeesAlphabeticalArr = getUsersAlphabetical(employees);
-
-  return error ? (
-    "Error!"
-  ) : loading ? (
-    "Loading..."
-  ) : (
-    <div className="employees">
-      {employeesAlphabeticalArr.map((item) => {
-        return <EmployeesLetterBlock letterItem={item} />;
-      })}
-    </div>
+  return (
+    <>
+      <h2>Employees</h2>
+      <div className="employees">
+        {employeesAlphabetical.map((item) => {
+          return <EmployeesLetterBlock key={item.letter} item={item} />;
+        })}
+      </div>
+    </>
   );
 }
 
-function EmployeesLetterBlock({ letterItem: { letter, users } }) {
+EmployeesLetterBlock.propTypes = {
+  item: PropTypes.object,
+};
+
+function EmployeesLetterBlock({ item: { letter, users } }) {
   return (
-    <div key={letter} className="employees-letter-block">
-      <div>{letter}</div>
+    <div className="employees-letter-block">
+      <div className="employees-letter-block-title">{letter}</div>
       <EmployeesList employees={users} />
     </div>
   );
 }
 
+EmployeesList.propTypes = {
+  employees: PropTypes.array,
+};
+
 function EmployeesList({ employees }) {
   return employees.length ? (
     <ul className="employees-list">
       {employees.map((emp) => {
-        return <EmployeesListItem employee={emp} />;
+        return <EmployeesListItem key={emp.id} employee={emp} />;
       })}
     </ul>
   ) : (
-    <div>No Employees</div>
+    <div className="employees-list-empty">No Employees</div>
   );
 }
 
+EmployeesListItem.propTypes = {
+  employee: PropTypes.object,
+};
+
 function EmployeesListItem({ employee }) {
-  const { id, firstName, lastName } = employee;
+  const { id, firstName, lastName, dob, isActive } = employee;
+  const setActiveEmployees = useContext(EmployeesContext);
+
+  const dispatch = useDispatch();
 
   const onChange = (e) => {
-    console.log(">>>>>>>>>>> e.target:\n", e.target);
+    dispatch(updateEmployee(employee));
+
+    if (!isActive) {
+      setActiveEmployees((state) => ({
+        ...state,
+        [id]: {
+          firstName,
+          lastName,
+          dob,
+        },
+      }));
+    } else {
+      setActiveEmployees((state) => {
+        delete state[id];
+        return state;
+      });
+    }
   };
 
   return (
-    <li key={id} className="employees-list-item">
-      <div>{`${firstName} ${lastName}`}</div>
+    <li className={`employees-list-item${isActive ? " active" : ""}`}>
+      <div className="employees-list-item-name">{`${firstName} ${lastName}`}</div>
       <form>
-        <div>
+        <div className="radio-item">
           <input
             type="radio"
             id={`${id}notActive`}
             name="status"
-            value={id}
+            value={false}
+            checked={!isActive}
             onChange={onChange}
           />
           <label htmlFor={`${id}notActive`}>not active</label>
         </div>
-        <div>
+        <div className="radio-item">
           <input
             type="radio"
             id={`${id}active`}
             name="status"
-            value={id}
+            value={true}
+            checked={isActive}
+            onChange={onChange}
           />
-          <label htmlFor={`${id}active`}>not active</label>
+          <label htmlFor={`${id}active`}>active</label>
         </div>
       </form>
     </li>
   );
 }
 
-function Birthdays() {
-  return <div className="birthdays">Birthdays</div>;
+Birthdays.propTypes = {
+  activeEmployees: PropTypes.object,
+};
+
+function Birthdays({ activeEmployees }) {
+  const employeesByMonth = getUsersByMonth(activeEmployees);
+
+  return (
+    <>
+      <h2>Employees birthday</h2>
+      <div className="birthdays">
+        {Object.keys(activeEmployees).length ? (
+          employeesByMonth.map((emp) => {
+            return (
+              <MonthBirthdays
+                key={emp.month}
+                month={emp.month}
+                employees={emp.users}
+              />
+            );
+          })
+        ) : (
+          <div className="birthdays-empty">Employees List is empty</div>
+        )}
+      </div>
+    </>
+  );
+}
+
+MonthBirthdays.propTypes = {
+  month: PropTypes.string,
+  employees: PropTypes.array,
+};
+
+function MonthBirthdays({ month, employees }) {
+  return (
+    <div className="month-birthdays">
+      <div className="month-birthdays-title">{month}</div>
+      {employees.length ? (
+        <ul className="month-birthdays-list">
+          {employees.map((emp) => {
+            return (
+              <li key={emp.id}>
+                {`${emp.lastName} ${emp.firstName} - ${emp.dob}`}
+              </li>
+            );
+          })}
+        </ul>
+      ) : (
+        <div className="month-birthdays-empty">No Employees</div>
+      )}
+    </div>
+  );
 }
 
 // Functions
@@ -118,11 +231,70 @@ function getUsersAlphabetical(users) {
   alphabetArr.forEach((letter) => (usersAlphabeticalObj[letter] = []));
 
   users
-    ?.sort(sortObjectsBy("firstName"))
-    .forEach((u) => usersAlphabeticalObj[u.firstName[0]].push(u));
+    .sort(sortObjectsBy("firstName"))
+    .forEach((user) => usersAlphabeticalObj[user.firstName[0]].push(user));
 
   return Object.entries(usersAlphabeticalObj).map(([letter, users]) => ({
     letter,
+    users,
+  }));
+}
+
+function getMonths() {
+  const months = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+  ];
+
+  const currentDate = new Date();
+  const currentMonthIndex = currentDate.getMonth();
+  const monthsFromCurrent = [];
+
+  for (let i = currentMonthIndex; i < months.length; i++) {
+    monthsFromCurrent.push(months[i]);
+  }
+
+  for (let i = 0; i < currentMonthIndex; i++) {
+    monthsFromCurrent.push(months[i]);
+  }
+
+  return { months, monthsFromCurrent };
+}
+
+function getUsersByMonth(usersObj) {
+  const { months, monthsFromCurrent } = getMonths();
+  const usersByMonth = {};
+
+  monthsFromCurrent.map((month) => (usersByMonth[month] = []));
+
+  const usersArr = Object.entries(usersObj).map(([id, user]) => ({
+    id,
+    ...user,
+  }));
+
+  usersArr.sort(sortObjectsBy("lastName")).forEach((user) => {
+    const dobObject = new Date(Date.parse(user.dob));
+    const yearOfBirth = dobObject.getFullYear();
+    const monthOfBirth = months[dobObject.getMonth()];
+    const dayOfBirth = dobObject.getDate();
+
+    const dobFormatted = `${dayOfBirth} ${monthOfBirth}, ${yearOfBirth} year`;
+
+    usersByMonth[monthOfBirth].push({ ...user, dob: dobFormatted });
+  });
+
+  return Object.entries(usersByMonth).map(([month, users]) => ({
+    month,
     users,
   }));
 }

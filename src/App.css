@@ -1,26 +1,99 @@
-/*Layout*/
+.error-message {
+  color: crimson;
+}
 
+/*Layout*/
 .layout {
-  max-width: 1200px;
+  max-width: 1344px;
   margin: 32px auto;
+  padding: 0 32px;
 }
 
 .layout-left {
   float: left;
-  width: 75%;
+  width: 65%;
 }
 
 .layout-right {
   float: right;
-  width: 25%;
+  width: 35%;
 }
 
 /*Employees*/
 .employees {
   display: flex;
   flex-wrap: wrap;
+  justify-content: space-between;
+  border-right: 1px solid lightgrey;
 }
 
+/*EmployeesLetterBlock*/
 .employees-letter-block {
-  width: 300px;
+  width: 260px;
+  margin-bottom: 32px;
+}
+
+.employees-letter-block-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+/*EmployeesList*/
+.employees-list {
+  list-style: none;
+}
+
+.employees-list-empty {
+  font-size: 14px;
+  color: darkgrey;
+}
+
+/*EmployeesListItem*/
+.employees-list-item {
+  margin-bottom: 12px;
+}
+
+.employees-list-item-name {
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.employees-list-item.active .employees-list-item-name {
+  color: mediumblue;
+}
+
+.radio-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+/*Birthdays*/
+.birthdays {
+  padding-left: 24px;
+}
+
+.birthdays-empty {
+  color: darkgrey;
+}
+
+/*MonthBirthdays*/
+.month-birthdays {
+  margin-bottom: 16px;
+}
+
+.month-birthdays-title {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.month-birthdays-list {
+  margin-left: 16px;
+  font-size: 14px;
+}
+
+.month-birthdays-empty {
+  color: darkgrey;
+  font-size: 14px;
 }
